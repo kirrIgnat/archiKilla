@@ -1,0 +1,76 @@
+name: artem-study
+
+x-app-env: &app-env
+  ADDR: ":8085"
+  DATABASE_URL: postgres://admin:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/artem_study?sslmode=disable
+  PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8085}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Moscow}
+  ADMIN_LOGIN: admin
+  ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+  TELEGRAM_ADMIN_ID: ${TELEGRAM_ADMIN_ID:-}
+  TELEGRAM_IPV4_ONLY: ${TELEGRAM_IPV4_ONLY:-false}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: artem_study
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d artem_study"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  web:
+    build: .
+    image: artem-study:local
+    environment: *app-env
+    ports:
+      - "127.0.0.1:${HOST_PORT:-8085}:8085"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8085/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  bot:
+    profiles:
+      - bot
+    image: artem-study:local
+    build: .
+    entrypoint:
+      - /app/bot
+    environment: *app-env
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: "on-failure:5"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  postgres_data:

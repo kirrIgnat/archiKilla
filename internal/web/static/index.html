@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#222222"><title>archikilla-study</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<section id="login-screen" class="login-shell" hidden>
+ <div class="login-panel"><form id="login-form"><a class="brand login-brand" href="/">ARCHIKILLA<span>-STUDY</span></a><h2>Вход</h2><label>Логин<input name="login" required autocomplete="username" maxlength="64"></label><label>Пароль<input name="password" type="password" required autocomplete="current-password" maxlength="72"></label><p class="error" id="login-error" role="alert"></p><button class="primary wide" type="submit">Войти</button><p class="small muted">Если вы забыли пароль, обратитесь к преподавателю.</p></form></div>
+</section>
+<div id="app" class="app-shell" hidden>
+ <aside><a class="brand" href="/">ARCHIKILLA<span>-STUDY</span></a><nav aria-label="Основная навигация"><button data-page="overview" data-admin>Обзор <span>01</span></button><button data-page="schedule">Расписание <span>02</span></button><button data-page="homework">Домашние задания <span>03</span></button><button data-page="students" data-admin>Ученики <span>04</span></button><button data-page="payments" data-admin>Оплата <span>05</span></button><button data-page="settings" data-admin>Настройки <span>06</span></button></nav></aside>
+ <div class="workspace"><header><div><span class="small muted" id="role-label"></span><strong id="current-user"></strong></div><div class="header-right"><span id="clock-label" class="small muted"></span><button id="logout" class="ghost">Выйти</button></div></header><main id="content" tabindex="-1"></main><footer>ARCHIKILLA-STUDY</footer></div>
+</div>
+<div id="loading" class="loading">ARCHIKILLA-STUDY <span>Загрузка...</span></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<dialog id="editor"><div class="dialog-head"><h2 id="dialog-title"></h2><button id="close-dialog" class="ghost" aria-label="Закрыть">Закрыть</button></div><div id="dialog-body"></div></dialog>
+</body></html>

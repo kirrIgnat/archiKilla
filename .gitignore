@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+/bin/
+*.log
+*.dump
+*.sql.gz
+/coverage.out
+.DS_Store
