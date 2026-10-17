@@ -49,3 +49,10 @@ CREATE TABLE IF NOT EXISTS telegram_invites (
  expires_at timestamptz NOT NULL
 );
 CREATE TABLE IF NOT EXISTS bot_state (key text PRIMARY KEY, value bigint NOT NULL);
+
+CREATE TABLE IF NOT EXISTS telegram_identities (
+ telegram_id bigint PRIMARY KEY, user_id bigint NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE
+);
+INSERT INTO telegram_identities(telegram_id,user_id)
+ SELECT t.telegram_id,u.id FROM telegram_links t JOIN users u ON u.student_id=t.student_id
+ ON CONFLICT DO NOTHING;

@@ -46,13 +46,14 @@ func (a *App) Handler(static http.Handler) http.Handler {
 		writeJSON(w, 200, map[string]string{"status": "ok"})
 	})
 	m.HandleFunc("POST /api/login", api.login)
+	m.HandleFunc("POST /api/telegram/login", api.telegramLogin)
 	m.Handle("/api/", api.auth(http.HandlerFunc(api.route)))
 	m.Handle("/", static)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
-		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+		// Telegram Web embeds the same site in an iframe; CSP limits allowed ancestors.
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' https://telegram.org; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self' https://web.telegram.org https://*.web.telegram.org; base-uri 'none'; form-action 'self'")
 		if a.Config.Secure {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
 		}
@@ -200,13 +201,13 @@ func (api *API) login(w http.ResponseWriter, r *http.Request) {
 }
 func (api *API) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, e := r.Cookie("artem_session")
-		if e != nil {
+		token := sessionToken(r)
+		if token == "" {
 			fail(w, 401, "Войдите в кабинет")
 			return
 		}
 		var s session
-		e = api.DB.QueryRowContext(r.Context(), `SELECT u.id,u.login,u.role,COALESCE(u.student_id,0),t.csrf FROM sessions t JOIN users u ON u.id=t.user_id LEFT JOIN students p ON p.id=u.student_id WHERE t.token_hash=$1 AND t.expires_at>now() AND (u.role='admin' OR p.active)`, Hash(c.Value)).Scan(&s.User.ID, &s.User.Login, &s.User.Role, &s.User.StudentID, &s.CSRF)
+		e := api.DB.QueryRowContext(r.Context(), `SELECT u.id,u.login,u.role,COALESCE(u.student_id,0),t.csrf FROM sessions t JOIN users u ON u.id=t.user_id LEFT JOIN students p ON p.id=u.student_id WHERE t.token_hash=$1 AND t.expires_at>now() AND (u.role='admin' OR p.active)`, Hash(token)).Scan(&s.User.ID, &s.User.Login, &s.User.Role, &s.User.StudentID, &s.CSRF)
 		if errors.Is(e, sql.ErrNoRows) {
 			fail(w, 401, "Войдите в кабинет")
 			return
@@ -296,8 +297,7 @@ func (api *API) route(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if r.Method == "POST" && path == "api/logout" {
-		c, _ := r.Cookie("artem_session")
-		_, e := api.DB.ExecContext(r.Context(), "DELETE FROM sessions WHERE token_hash=$1", Hash(c.Value))
+		_, e := api.DB.ExecContext(r.Context(), "DELETE FROM sessions WHERE token_hash=$1", Hash(sessionToken(r)))
 		if e != nil {
 			dbFail(w, e)
 			return

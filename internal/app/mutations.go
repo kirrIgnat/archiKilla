@@ -346,6 +346,14 @@ func (api *API) unlink(w http.ResponseWriter, r *http.Request, u User) {
 		dbFail(w, e)
 		return
 	}
+	if _, e = tx.ExecContext(r.Context(), "DELETE FROM telegram_identities WHERE user_id=(SELECT id FROM users WHERE student_id=$1)", id); e != nil {
+		dbFail(w, e)
+		return
+	}
+	if _, e = tx.ExecContext(r.Context(), "DELETE FROM sessions WHERE user_id=(SELECT id FROM users WHERE student_id=$1)", id); e != nil {
+		dbFail(w, e)
+		return
+	}
 	if e = tx.Commit(); e != nil {
 		dbFail(w, e)
 		return

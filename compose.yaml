@@ -6,10 +6,10 @@ x-app-env: &app-env
   PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8085}
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
   APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Moscow}
-  ADMIN_LOGIN: admin
+  ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
   ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD}
   TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-  TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+  TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-archi_study_bot}
   TELEGRAM_ADMIN_ID: ${TELEGRAM_ADMIN_ID:-}
   TELEGRAM_IPV4_ONLY: ${TELEGRAM_IPV4_ONLY:-false}
 
@@ -20,6 +20,8 @@ services:
       POSTGRES_DB: artem_study
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:15432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -55,12 +57,18 @@ services:
   bot:
     profiles:
       - bot
-    image: artem-study:local
     build: .
+    image: artem-study:local
     entrypoint:
       - /app/bot
-    environment: *app-env
+    network_mode: host
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgres://admin:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@127.0.0.1:15432/artem_study?sslmode=disable
+      TELEGRAM_IPV4_ONLY: "false"
     depends_on:
+      db:
+        condition: service_healthy
       web:
         condition: service_healthy
     restart: "on-failure:5"

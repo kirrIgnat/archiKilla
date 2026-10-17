@@ -11,8 +11,8 @@ const labels = {planned:'Запланировано',completed:'Проведен
 const tag = s => `<span class="tag ${esc(s)}">${esc(labels[s]||s)}</span>`;
 const empty = (title,text='') => `<div class="empty"><h3>${esc(title)}</h3>${esc(text)}</div>`;
 function toast(text){$('#toast').textContent=text;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,5000)}
-async function api(path,method='GET',body){const r=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json','X-CSRF-Token':S.csrf},body:body===undefined?undefined:JSON.stringify(body)});let value;try{value=await r.json()}catch{throw Error('Сервер вернул неожиданный ответ')};if(!r.ok){if(r.status===401&&path!='/login')showLogin();throw Error(value.error||'Не удалось выполнить запрос')};return value}
-function showLogin(){S.me=null;S.csrf='';$('#app').hidden=true;$('#login-screen').hidden=false;$('#loading').hidden=true;if($('#editor').open)$('#editor').close()}
+async function api(path,method='GET',body){const r=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json','X-CSRF-Token':S.csrf,'X-Mini-App-Session':window.miniAppSession||''},body:body===undefined?undefined:JSON.stringify(body)});let value;try{value=await r.json()}catch{throw Error('Сервер вернул неожиданный ответ')};if(!r.ok){if(r.status===401&&path!='/login')showLogin();throw Error(value.error||'Не удалось выполнить запрос')};return value}
+function showLogin(){window.miniAppSession='';S.me=null;S.csrf='';$('#app').hidden=true;$('#login-screen').hidden=false;$('#loading').hidden=true;if($('#editor').open)$('#editor').close()}
 function parts(d){return Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:S.timezone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(d)).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]))}
 function localValue(d=new Date()){const p=parts(d);return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`}
 function iso(local){if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(local))throw Error('Укажите дату и время');const target=new Date(local+'Z').getTime();let t=target;for(let i=0;i<4;i++){const p=parts(t);const represented=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute);t+=target-represented}if(localValue(t)!==local)throw Error('Такого местного времени нет. Выберите другое время.');return new Date(t).toISOString()}
@@ -65,4 +65,4 @@ document.addEventListener('submit',async e=>{if(e.target.id!=='password-form')re
 $('#close-dialog').onclick=()=>$('#editor').close();
 $('#logout').onclick=async()=>{try{await api('/logout','POST',{});showLogin()}catch(e){toast(e.message)}};
 $('#login-form').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,b=f.querySelector('button');b.disabled=true;$('#login-error').textContent='';try{await api('/login','POST',Object.fromEntries(new FormData(f)));S.page='overview';await enter();if(!admin()){S.page='schedule';render()}f.reset()}catch(err){$('#login-error').textContent=err.message}finally{b.disabled=false}};
-enter().catch(e=>{showLogin();if(!e.message.includes('Войдите'))$('#login-error').textContent=e.message});
+startTelegramApp().catch(e=>{showLogin();if(!e.message.includes('Войдите'))$('#login-error').textContent=e.message});
